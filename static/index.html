@@ -1,0 +1,1758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#071018">
+<title>Signal Siege — claim the grid, hold the signal</title>
+<meta name="description" content="A 2–4 player turn-based strategy game for humans and AI agents. No login. 8-minute matches.">
+<style>
+  :root {
+    --bg: #071018;
+    --bg-2: #0a1620;
+    --panel: rgba(13, 27, 40, 0.82);
+    --panel-solid: #0d1b28;
+    --line: rgba(173, 216, 230, 0.13);
+    --line-strong: rgba(173, 216, 230, 0.25);
+    --text: #edf6fb;
+    --muted: #8ea7b9;
+    --muted-2: #688196;
+    --accent: #35e0c5;
+    --accent-2: #ff5c8a;
+    --gold: #ffd43b;
+    --danger: #ff6b6b;
+    --good: #51cf66;
+    --radius: 16px;
+    --shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+    --font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--text);
+    font-family: var(--font);
+    background:
+      radial-gradient(1100px 700px at 82% -10%, rgba(53, 224, 197, 0.12), transparent 60%),
+      radial-gradient(900px 700px at 6% 8%, rgba(255, 92, 138, 0.10), transparent 55%),
+      linear-gradient(180deg, #071018 0%, #08131c 60%, #060d14 100%);
+    -webkit-font-smoothing: antialiased;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.22;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.028) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.028) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: linear-gradient(180deg, black, transparent 85%);
+  }
+  button, input, select { font: inherit; }
+  button { color: inherit; }
+  a { color: var(--accent); }
+  .hidden { display: none !important; }
+  .shell { width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted); }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  /* ---------- shared chrome ---------- */
+  .topbar {
+    position: relative; z-index: 2;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; padding: 22px 0;
+  }
+  .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; color: var(--text); }
+  .brand-mark {
+    width: 34px; height: 34px; border-radius: 11px; position: relative;
+    background: linear-gradient(145deg, rgba(53,224,197,0.22), rgba(255,92,138,0.14));
+    border: 1px solid rgba(53,224,197,0.42);
+    box-shadow: 0 0 26px rgba(53, 224, 197, 0.12);
+    flex: 0 0 auto;
+  }
+  .brand-mark::before, .brand-mark::after {
+    content: ""; position: absolute; border-radius: 50%;
+    border: 1.5px solid var(--accent);
+  }
+  .brand-mark::before { width: 10px; height: 10px; left: 6px; top: 6px; box-shadow: 15px 15px 0 -2px var(--accent-2); }
+  .brand-mark::after { width: 18px; height: 18px; right: 6px; bottom: 6px; opacity: .45; }
+  .brand-text { font-weight: 800; letter-spacing: 0.14em; font-size: 13px; text-transform: uppercase; }
+  .top-links { display: flex; gap: 16px; align-items: center; font-size: 12px; color: var(--muted); }
+  .top-links a { color: var(--muted); text-decoration: none; border-bottom: 1px solid transparent; }
+  .top-links a:hover { color: var(--text); border-color: var(--line-strong); }
+  .live-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--good); box-shadow: 0 0 10px var(--good); margin-right: 6px; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 11px; border-radius: 999px;
+    border: 1px solid var(--line); background: rgba(255,255,255,0.035);
+    color: var(--muted); font-size: 12px;
+  }
+  .chip .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .btn {
+    border: 1px solid var(--line-strong); background: rgba(255,255,255,0.04);
+    border-radius: 12px; padding: 12px 16px; cursor: pointer;
+    font-weight: 650; font-size: 14px; min-height: 46px;
+    transition: transform .14s ease, background .14s ease, border-color .14s ease, opacity .14s ease;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    text-decoration: none;
+  }
+  .btn:hover:not(:disabled) { background: rgba(255,255,255,0.075); border-color: rgba(255,255,255,0.34); transform: translateY(-1px); }
+  .btn:active:not(:disabled) { transform: translateY(0); }
+  .btn:disabled { opacity: .42; cursor: not-allowed; }
+  .btn-primary {
+    border-color: transparent; color: #03231e;
+    background: linear-gradient(135deg, #64f1da, #20c9b0);
+    box-shadow: 0 10px 30px rgba(53, 224, 197, 0.18);
+  }
+  .btn-primary:hover:not(:disabled) { background: linear-gradient(135deg, #83f7e3, #31d8be); border-color: transparent; }
+  .btn-pink {
+    border-color: rgba(255,92,138,0.35); color: #ffd7e2;
+    background: rgba(255,92,138,0.12);
+  }
+  .btn-pink:hover:not(:disabled) { background: rgba(255,92,138,0.2); border-color: rgba(255,92,138,0.55); }
+  .btn-ghost { background: transparent; }
+  .btn-sm { min-height: 38px; padding: 8px 12px; border-radius: 10px; font-size: 12.5px; }
+  .field { display: flex; flex-direction: column; gap: 7px; }
+  .field label, .label { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  input[type="text"], input[type="search"], select {
+    width: 100%; border: 1px solid var(--line-strong); border-radius: 11px;
+    background: rgba(3, 10, 16, 0.55); color: var(--text);
+    padding: 12px 13px; min-height: 46px; outline: none;
+    transition: border-color .14s ease, box-shadow .14s ease;
+  }
+  input::placeholder { color: var(--muted-2); }
+  input:focus, select:focus { border-color: rgba(53,224,197,0.7); box-shadow: 0 0 0 3px rgba(53,224,197,0.1); }
+  select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 18px) 20px, calc(100% - 13px) 20px; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 34px; }
+  .code-input { text-transform: uppercase; letter-spacing: .22em; font-family: var(--mono); font-weight: 700; }
+  .hint { font-size: 12px; color: var(--muted-2); line-height: 1.5; }
+  .error-text { color: #ff9cac; }
+
+  /* ---------- home ---------- */
+  .home { padding: 18px 0 48px; }
+  .hero { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(340px, .88fr); gap: 54px; align-items: center; padding: 30px 0 44px; }
+  .eyebrow { display: flex; align-items: center; gap: 9px; color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; margin-bottom: 16px; }
+  .eyebrow::before { content: ""; width: 26px; height: 1px; background: var(--accent); }
+  h1 {
+    margin: 0; font-size: clamp(46px, 7.6vw, 84px); line-height: .92;
+    letter-spacing: -0.055em; font-weight: 900;
+  }
+  h1 .signal { color: var(--accent); text-shadow: 0 0 42px rgba(53,224,197,0.28); }
+  .hero-copy .lede { max-width: 590px; margin: 22px 0 0; color: #b7cbd8; font-size: 17px; line-height: 1.62; }
+  .hero-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+  .tag {
+    display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px;
+    border: 1px solid var(--line); border-radius: 7px; color: var(--muted); font-size: 11px;
+    background: rgba(255,255,255,0.025);
+  }
+  .tag strong { color: var(--text); font-weight: 700; }
+  .pulse-rings { position: relative; height: 92px; width: 92px; margin: 30px 0 0 4px; opacity: .9; }
+  .pulse-rings span { position: absolute; inset: 0; border: 1px solid rgba(53,224,197,.28); border-radius: 50%; }
+  .pulse-rings span:nth-child(2) { inset: 16px; border-color: rgba(255,92,138,.35); }
+  .pulse-rings span:nth-child(3) { inset: 32px; background: radial-gradient(circle, rgba(53,224,197,.2), rgba(53,224,197,.03)); border-color: rgba(53,224,197,.6); }
+  .pulse-rings::after { content: "3"; position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--mono); font-size: 22px; color: var(--accent); }
+
+  .launch-card {
+    background: linear-gradient(180deg, rgba(16,32,46,.94), rgba(10,22,32,.96));
+    border: 1px solid var(--line-strong); border-radius: 22px; padding: 22px;
+    box-shadow: var(--shadow); position: relative; overflow: hidden;
+  }
+  .launch-card::before {
+    content: ""; position: absolute; inset: -1px; pointer-events: none;
+    background: linear-gradient(120deg, rgba(53,224,197,.12), transparent 32%, transparent 68%, rgba(255,92,138,.1));
+  }
+  .launch-head { position: relative; display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+  .launch-head h2 { margin: 0 0 4px; font-size: 21px; letter-spacing: -0.02em; }
+  .launch-head p { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+  .launch-body { position: relative; display: flex; flex-direction: column; gap: 15px; }
+  .launch-primary { display: grid; grid-template-columns: 1fr auto; gap: 9px; align-items: end; }
+  .quick-row { display: grid; grid-template-columns: 1fr; gap: 9px; }
+  .quick-row .btn { width: 100%; min-height: 50px; font-size: 15px; }
+  .sub-actions { display: grid; grid-template-columns: 1fr auto; gap: 9px; align-items: end; }
+  .join-box { border-top: 1px solid var(--line); padding-top: 15px; display: flex; flex-direction: column; gap: 10px; }
+  .join-row { display: grid; grid-template-columns: 1fr auto; gap: 9px; }
+  .micro { font-size: 11px; color: var(--muted-2); line-height: 1.5; }
+  .resume {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 11px 12px; border: 1px dashed rgba(53,224,197,.3); border-radius: 11px;
+    background: rgba(53,224,197,.05); font-size: 12px;
+  }
+  .resume strong { font-family: var(--mono); letter-spacing: .1em; }
+  .divider-or { display: flex; align-items: center; gap: 10px; color: var(--muted-2); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+  .divider-or::before, .divider-or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+  .how { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 8px; }
+  .how-card { border: 1px solid var(--line); background: rgba(255,255,255,0.025); border-radius: 14px; padding: 16px; }
+  .how-icon { font-family: var(--mono); font-size: 12px; color: var(--accent); margin-bottom: 9px; }
+  .how-card h3 { margin: 0 0 6px; font-size: 13px; letter-spacing: .01em; }
+  .how-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+  .rules-strip {
+    margin-top: 22px; padding: 16px 18px; border-left: 2px solid var(--accent-2);
+    background: rgba(255,255,255,0.022); border-radius: 0 12px 12px 0;
+    color: #a9bfce; font-size: 13px; line-height: 1.65;
+  }
+  .rules-strip strong { color: var(--text); }
+  .footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding: 28px 0 10px; border-top: 1px solid var(--line); margin-top: 42px; color: var(--muted-2); font-size: 11px; }
+  .footer a { color: var(--muted); text-decoration: none; }
+  .footer a:hover { color: var(--text); }
+
+  /* ---------- match chrome ---------- */
+  .match { padding-bottom: 60px; }
+  .match-top {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 7px 0 18px;
+  }
+  .match-id { display: flex; align-items: center; gap: 10px; }
+  .match-id .kicker { font-size: 10px; text-transform: uppercase; letter-spacing: .16em; color: var(--muted-2); font-weight: 800; }
+  .match-code {
+    font-family: var(--mono); font-size: 20px; font-weight: 800; letter-spacing: .17em;
+    padding: 7px 10px; border-radius: 9px; border: 1px solid var(--line-strong);
+    background: rgba(255,255,255,0.04); cursor: pointer; color: var(--text);
+  }
+  .match-code:hover { border-color: rgba(53,224,197,.55); }
+  .match-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .clock {
+    display: inline-flex; align-items: baseline; gap: 6px; padding: 9px 12px;
+    border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.03);
+    font-family: var(--mono); font-weight: 750; font-size: 14px;
+  }
+  .clock .clock-label { font-family: var(--font); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted-2); }
+  .clock.urgent { color: #ffb3c0; border-color: rgba(255,107,107,.45); background: rgba(255,107,107,.08); }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line);
+    border-radius: 999px; padding: 8px 12px; font-size: 11px; color: var(--muted);
+    background: rgba(255,255,255,.03); white-space: nowrap;
+  }
+  .status-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+
+  /* ---------- lobby ---------- */
+  .lobby-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(300px, .95fr); gap: 18px; align-items: start; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: 0 16px 44px rgba(0,0,0,.2);
+  }
+  .lobby-main { padding: 24px; }
+  .lobby-main h2 { margin: 0 0 5px; font-size: 24px; letter-spacing: -.03em; }
+  .lobby-main > p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+  .invite-row { display: flex; gap: 9px; margin: 18px 0 4px; }
+  .invite-row input { font-size: 12px; }
+  .lobby-seats { display: grid; gap: 10px; margin: 20px 0; }
+  .seat {
+    display: flex; align-items: center; gap: 13px; padding: 12px;
+    border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.025);
+    min-height: 68px;
+  }
+  .seat.empty { border-style: dashed; color: var(--muted-2); background: rgba(255,255,255,.012); }
+  .seat-avatar {
+    width: 40px; height: 40px; border-radius: 11px; flex: 0 0 auto;
+    display: grid; place-items: center; font-weight: 850; font-size: 15px;
+    color: #071018; background: var(--c, #334);
+    border: 1px solid rgba(255,255,255,.16);
+  }
+  .seat.empty .seat-avatar { background: rgba(255,255,255,.04); color: var(--muted-2); border-style: dashed; }
+  .seat-body { min-width: 0; }
+  .seat-name { display: flex; align-items: center; gap: 7px; font-weight: 750; font-size: 14px; overflow-wrap: anywhere; }
+  .seat-role { color: var(--muted); font-size: 11px; margin-top: 3px; }
+  .tiny-tag { display: inline-block; padding: 2px 5px; border-radius: 4px; font-size: 9px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--accent); border: 1px solid rgba(53,224,197,.3); background: rgba(53,224,197,.07); }
+  .tiny-tag.pink { color: #ffb6c8; border-color: rgba(255,92,138,.3); background: rgba(255,92,138,.08); }
+  .lobby-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 17px; }
+  .lobby-note { margin-top: 14px; padding: 11px 12px; border-radius: 9px; background: rgba(53,224,197,.055); border: 1px solid rgba(53,224,197,.16); color: #b7d4d2; font-size: 12px; line-height: 1.5; }
+  .lobby-side { padding: 20px; }
+  .lobby-side h3 { margin: 0 0 12px; font-size: 12px; letter-spacing: .13em; text-transform: uppercase; color: var(--muted); }
+  .steps { display: grid; gap: 11px; }
+  .step { display: grid; grid-template-columns: 26px 1fr; gap: 10px; font-size: 12.5px; line-height: 1.5; color: #b2c7d5; }
+  .step-num { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; border: 1px solid var(--line); color: var(--accent); font-family: var(--mono); font-size: 11px; background: rgba(53,224,197,.05); }
+  .lobby-side .rule-mini { margin-top: 17px; padding-top: 15px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11.5px; line-height: 1.6; }
+
+  /* ---------- game ---------- */
+  .result-banner {
+    position: relative; overflow: hidden; display: flex; flex-wrap: wrap; align-items: center;
+    justify-content: space-between; gap: 18px; padding: 18px 20px; margin-bottom: 16px;
+    border: 1px solid rgba(53,224,197,.3); border-radius: var(--radius);
+    background: linear-gradient(110deg, rgba(53,224,197,.15), rgba(255,92,138,.08));
+  }
+  .result-banner.loss { border-color: rgba(255,92,138,.3); background: linear-gradient(110deg, rgba(255,92,138,.12), rgba(53,224,197,.06)); }
+  .result-kicker { font-size: 10px; text-transform: uppercase; letter-spacing: .18em; color: var(--accent); font-weight: 800; }
+  .result-banner h2 { margin: 4px 0 3px; font-size: clamp(24px, 4vw, 36px); letter-spacing: -.04em; }
+  .result-banner p { margin: 0; color: #bcd0dc; font-size: 12.5px; }
+  .result-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .scoreboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(142px, 1fr)); gap: 9px; width: 100%; max-width: 954px; margin: 0 auto 12px; }
+  .player-card {
+    position: relative; display: grid; grid-template-columns: 10px 1fr auto; gap: 9px;
+    align-items: center; padding: 11px 12px; min-height: 70px;
+    border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.025);
+    overflow: hidden;
+  }
+  .player-card.current { border-color: rgba(53,224,197,.5); background: rgba(53,224,197,.065); box-shadow: inset 0 0 0 1px rgba(53,224,197,.12); }
+  .player-card.you { box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+  .player-card.out { opacity: .48; filter: grayscale(.4); }
+  .player-card .swatch { width: 10px; height: 42px; border-radius: 99px; background: var(--c); box-shadow: 0 0 16px color-mix(in srgb, var(--c) 55%, transparent); }
+  .player-card .p-name { font-weight: 750; font-size: 13px; display: flex; align-items: center; gap: 5px; min-width: 0; }
+  .player-card .p-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .player-card .p-meta { margin-top: 4px; color: var(--muted); font-size: 10.5px; display: flex; gap: 7px; flex-wrap: wrap; }
+  .player-card .p-score { font-family: var(--mono); font-size: 21px; font-weight: 800; line-height: 1; text-align: right; }
+  .player-card .p-score small { display: block; font-family: var(--font); font-size: 8px; letter-spacing: .12em; color: var(--muted-2); text-transform: uppercase; margin-top: 4px; font-weight: 700; }
+  .you-tag { font-size: 8px; letter-spacing: .07em; padding: 2px 4px; border-radius: 3px; color: var(--accent); background: rgba(53,224,197,.1); border: 1px solid rgba(53,224,197,.22); font-weight: 800; }
+  .bot-tag { font-size: 8px; letter-spacing: .07em; padding: 2px 4px; border-radius: 3px; color: #ffb6c8; background: rgba(255,92,138,.1); border: 1px solid rgba(255,92,138,.22); font-weight: 800; }
+
+  .play-grid { display: grid; grid-template-columns: minmax(0, 560px) minmax(280px, 380px); gap: 14px; align-items: start; justify-content: center; }
+  .board-card { padding: 14px; }
+  .turn-strip { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 2px 3px 11px; }
+  .turn-main { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .turn-orb { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 13px var(--accent); flex: 0 0 auto; }
+  .turn-orb.waiting { background: var(--muted-2); box-shadow: none; }
+  .turn-title { font-size: 13px; font-weight: 750; line-height: 1.25; }
+  .turn-sub { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .turn-clock { font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .turn-track { height: 3px; border-radius: 99px; background: rgba(255,255,255,.07); overflow: hidden; margin: 0 2px 12px; }
+  .turn-fill { height: 100%; width: 100%; background: linear-gradient(90deg, var(--accent), #ff5c8a); border-radius: inherit; transition: width .35s linear; }
+  .action-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; width: 100%; max-width: min(560px, max(360px, 52vh)); margin: 0 auto 9px; }
+  .action-btn {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    min-height: 44px; padding: 8px 10px; border-radius: 10px;
+    border: 1px solid var(--line); background: rgba(255,255,255,.03);
+    color: var(--muted); font-size: 12px; font-weight: 750; cursor: pointer;
+    transition: all .14s ease;
+  }
+  .action-btn .count { font-family: var(--mono); font-size: 10px; color: var(--muted-2); background: rgba(255,255,255,.06); padding: 2px 5px; border-radius: 4px; }
+  .action-btn:hover:not(:disabled) { border-color: var(--line-strong); color: var(--text); background: rgba(255,255,255,.055); }
+  .action-btn:disabled { opacity: .32; cursor: not-allowed; }
+  .action-btn.active { color: #05251f; background: linear-gradient(135deg, #64f1da, #22cdb3); border-color: transparent; box-shadow: 0 5px 18px rgba(53,224,197,.16); }
+  .action-btn.active .count { color: #05372f; background: rgba(2,40,35,.14); }
+  .action-hint { width: 100%; max-width: min(560px, max(360px, 52vh)); min-height: 31px; margin: 0 auto 10px; color: var(--muted); font-size: 11.5px; line-height: 1.45; }
+  .action-hint strong { color: #cfe2ec; font-weight: 650; }
+  .board-host { width: 100%; max-width: min(560px, max(360px, 52vh)); margin: 0 auto; }
+  .board-shell { display: grid; grid-template-columns: 16px minmax(0, 1fr); grid-template-rows: 16px minmax(0, 1fr); gap: 5px; width: 100%; }
+  .board-shell .axis { color: var(--muted-2); font-family: var(--mono); font-size: 9px; user-select: none; }
+  .axis-cols { grid-column: 2; grid-row: 1; display: grid; grid-template-columns: repeat(5, 1fr); text-align: center; align-items: center; }
+  .axis-rows { grid-column: 1; grid-row: 2; display: grid; grid-template-rows: repeat(5, 1fr); align-items: center; text-align: center; }
+  .board {
+    grid-column: 2; grid-row: 2; display: grid; grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(5, 1fr); gap: 5px; aspect-ratio: 1 / 1; width: 100%;
+    min-height: 0;
+  }
+  .cell {
+    position: relative; appearance: none; border: 1px solid rgba(173,216,230,.1);
+    background: #0a1722; border-radius: 9px; padding: 0; overflow: hidden;
+    cursor: default; transition: transform .1s ease, box-shadow .12s ease, border-color .12s ease;
+    min-width: 0; min-height: 0;
+  }
+  .cell::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit;
+    background: var(--owner, transparent); opacity: 0; transition: opacity .16s ease;
+  }
+  .cell.owned::before { opacity: .20; }
+  .cell.owned { border-color: color-mix(in srgb, var(--owner) 58%, transparent); }
+  .cell.owned.mine { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--owner) 82%, transparent); }
+  .cell.node { border-color: rgba(255,212,59,.3); background: radial-gradient(circle at 50% 50%, rgba(255,212,59,.075), transparent 62%), #0a1722; }
+  .cell.node.owned { border-color: color-mix(in srgb, var(--owner) 60%, var(--gold)); }
+  .cell.legal {
+    cursor: pointer; outline: 2px solid var(--accent); outline-offset: -2px;
+    border-color: transparent; background: rgba(53,224,197,.08);
+  }
+  .cell.legal:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,0,0,.35); }
+  .cell.legal:active { transform: scale(.97); }
+  .cell.highlight { outline: 2px solid #fff; outline-offset: -2px; }
+  .cell:disabled { opacity: 1; }
+  .cell .cell-label { position: absolute; left: 4px; bottom: 3px; font-family: var(--mono); font-size: 7.5px; color: rgba(255,255,255,.34); z-index: 2; pointer-events: none; }
+  .cell .node-glyph {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font-size: clamp(16px, 3.6vw, 28px); color: rgba(255,212,59,.8);
+    text-shadow: 0 0 16px rgba(255,212,59,.3); z-index: 1; pointer-events: none;
+  }
+  .cell.node.owned .node-glyph { color: #fff8d0; text-shadow: 0 0 16px rgba(255,212,59,.8); }
+  .cell .node-bonus { position: absolute; right: 4px; top: 3px; z-index: 2; font-family: var(--mono); font-size: 7.5px; color: rgba(255,212,59,.72); }
+  .cell .strength { position: absolute; right: 4px; bottom: 4px; display: flex; gap: 2px; z-index: 2; }
+  .cell .strength i { display: block; width: 4px; height: 9px; border-radius: 2px; background: rgba(255,255,255,.17); }
+  .cell .strength i.on { background: #fff; box-shadow: 0 0 5px rgba(255,255,255,.35); }
+  .cell .atk-badge {
+    position: absolute; right: 3px; top: 3px; z-index: 3;
+    font-family: var(--mono); font-size: 8px; font-weight: 800; letter-spacing: -.03em;
+    padding: 2px 3px; border-radius: 3px; line-height: 1.2;
+  }
+  .cell .atk-badge.good { background: var(--accent); color: #03231e; }
+  .cell .atk-badge.bad { background: rgba(255,107,107,.9); color: #2a0509; }
+  .board-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; max-width: min(560px, max(360px, 52vh)); margin: 9px auto 1px; color: var(--muted-2); font-size: 10px; }
+  .board-foot .key { display: flex; align-items: center; gap: 5px; }
+  .board-foot .diamond { color: var(--gold); }
+
+  .side-card { padding: 14px; }
+  .side-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
+  .side-head h3 { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: .13em; color: var(--muted); }
+  .side-head .count { font-family: var(--mono); color: var(--muted-2); font-size: 10px; }
+  .log {
+    list-style: none; margin: 0; padding: 0; max-height: 370px; overflow-y: auto;
+    overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.16) transparent;
+  }
+  .log li { display: grid; grid-template-columns: 8px 1fr auto; gap: 8px; align-items: start; padding: 8px 2px; border-bottom: 1px solid rgba(255,255,255,.045); font-size: 11.5px; line-height: 1.45; }
+  .log li:last-child { border-bottom: 0; }
+  .log .log-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--c); margin-top: 5px; }
+  .log .log-text { color: #b7cbd7; overflow-wrap: anywhere; }
+  .log .log-text strong { color: var(--text); font-weight: 700; }
+  .log .log-time { font-family: var(--mono); font-size: 9px; color: var(--muted-2); padding-top: 2px; }
+  .log .mini-tag { display: inline-block; margin-left: 4px; padding: 1px 4px; border-radius: 3px; font-size: 7.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); vertical-align: 1px; }
+  .log .log-empty { display: block; padding: 19px 4px 18px; color: var(--muted-2); font-size: 12px; line-height: 1.6; border-bottom: 0; }
+  .log-empty strong { color: var(--muted); }
+
+  .pass-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 13px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted-2); font-size: 10.5px; }
+  .pass-line .tag { font-size: 9px; padding: 3px 6px; }
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 18px);
+    z-index: 50; max-width: min(440px, calc(100vw - 32px));
+    padding: 11px 15px; border-radius: 10px; border: 1px solid rgba(255,107,107,.4);
+    background: rgba(38, 12, 19, .94); color: #ffd8de; font-size: 12.5px;
+    box-shadow: 0 18px 50px rgba(0,0,0,.45); opacity: 0; pointer-events: none;
+    transition: opacity .16s ease, transform .16s ease;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast.ok { border-color: rgba(53,224,197,.4); background: rgba(8, 35, 31, .95); color: #c9fff5; }
+
+  /* ---------- replay modal ---------- */
+  .modal {
+    position: fixed; inset: 0; z-index: 40; display: grid; place-items: center;
+    padding: 16px; background: rgba(2, 7, 11, 0.78); backdrop-filter: blur(8px);
+  }
+  .modal-card {
+    position: relative; width: min(720px, 100%); max-height: calc(100vh - 32px);
+    overflow-y: auto; padding: 22px; border-radius: 20px;
+    border: 1px solid var(--line-strong); background: #0b1925;
+    box-shadow: 0 30px 90px rgba(0,0,0,.55);
+  }
+  .modal-close {
+    position: absolute; right: 13px; top: 12px; width: 36px; height: 36px;
+    border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,.035);
+    color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer;
+  }
+  .modal-close:hover { color: var(--text); background: rgba(255,255,255,.08); }
+  .modal h2 { margin: 0 42px 4px 0; font-size: 25px; letter-spacing: -.03em; }
+  .modal .modal-sub { margin: 0 0 16px; color: var(--muted); font-size: 12px; }
+  .replay-result { margin: 0 0 13px; padding: 9px 11px; border-radius: 8px; background: rgba(53,224,197,.06); border: 1px solid rgba(53,224,197,.15); color: #b8ded9; font-size: 12px; line-height: 1.5; }
+  #replay-board-host { width: 100%; max-width: min(470px, 54vh); margin: 0 auto 13px; }
+  .replay-controls { display: flex; align-items: center; gap: 6px; }
+  .replay-controls button {
+    width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line);
+    background: rgba(255,255,255,.035); color: var(--text); cursor: pointer; font-size: 13px;
+    display: grid; place-items: center; flex: 0 0 auto;
+  }
+  .replay-controls button:hover { background: rgba(255,255,255,.08); }
+  .replay-controls input[type="range"] { flex: 1; min-width: 60px; accent-color: var(--accent); }
+  .replay-counter { font-family: var(--mono); font-size: 10px; color: var(--muted); white-space: nowrap; }
+  .replay-move { min-height: 34px; margin: 10px 0 0; color: #b9ceda; font-size: 12px; line-height: 1.5; }
+  .replay-move strong { color: var(--text); }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; gap: 30px; padding-top: 12px; }
+    .pulse-rings { display: none; }
+    .launch-card { max-width: 560px; }
+    .how { grid-template-columns: repeat(2, 1fr); }
+    .lobby-grid, .play-grid { grid-template-columns: 1fr; }
+    .side-card .log { max-height: 260px; }
+  }
+  @media (max-width: 620px) {
+    .shell { width: min(100% - 20px, 1120px); }
+    .topbar { padding: 14px 0; }
+    .top-links { display: none; }
+    .home { padding-top: 0; }
+    .hero { padding: 16px 0 26px; gap: 24px; }
+    h1 { font-size: clamp(44px, 14vw, 68px); }
+    .hero-copy .lede { font-size: 15.5px; margin-top: 16px; }
+    .hero-tags { margin-top: 16px; }
+    .launch-card { padding: 17px; border-radius: 17px; }
+    .launch-primary, .sub-actions, .join-row { grid-template-columns: 1fr; }
+    .launch-primary .field { min-width: 0; }
+    .how { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .how-card { padding: 12px; }
+    .rules-strip { font-size: 12px; }
+    .footer { margin-top: 26px; }
+    .match { padding-bottom: 30px; }
+    .match-top { padding-bottom: 11px; }
+    .match-code { font-size: 17px; }
+    .match-tools { width: 100%; justify-content: space-between; }
+    .scoreboard { grid-template-columns: 1fr 1fr; gap: 6px; }
+    .player-card { grid-template-columns: 7px 1fr auto; padding: 9px; min-height: 62px; gap: 7px; }
+    .player-card .swatch { height: 35px; width: 7px; }
+    .player-card .p-score { font-size: 18px; }
+    .player-card .p-meta { gap: 5px; font-size: 9.5px; }
+    .board-card { padding: 10px; }
+    .board { gap: 4px; }
+    .board-shell { grid-template-columns: 13px minmax(0,1fr); grid-template-rows: 13px minmax(0,1fr); gap: 4px; }
+    .cell { border-radius: 7px; }
+    .cell .cell-label { font-size: 6.5px; left: 3px; bottom: 2px; }
+    .cell .strength { right: 3px; bottom: 3px; }
+    .cell .strength i { width: 3px; height: 7px; }
+    .cell .atk-badge { font-size: 7px; padding: 1px 2px; right: 2px; top: 2px; }
+    .cell .node-bonus { font-size: 6.5px; right: 3px; top: 2px; }
+    .action-btn { font-size: 11px; padding: 7px 4px; gap: 4px; }
+    .action-btn .count { font-size: 8.5px; padding: 1px 4px; }
+    .action-hint { min-height: 42px; font-size: 10.5px; }
+    .side-card { padding: 11px; }
+    .log { max-height: 230px; }
+    .result-banner { padding: 14px; }
+    .result-actions { width: 100%; }
+    .result-actions .btn { flex: 1; }
+    .modal { padding: 8px; }
+    .modal-card { padding: 17px; max-height: calc(100vh - 16px); }
+    .replay-controls { gap: 4px; }
+    .replay-controls button { width: 31px; height: 31px; }
+  }
+  @media (max-height: 700px) {
+    .modal-card { padding: 14px; }
+    .modal h2 { font-size: 20px; margin-bottom: 2px; }
+    .modal .modal-sub { margin-bottom: 8px; }
+    .replay-result { padding: 7px 9px; margin-bottom: 8px; font-size: 11px; }
+    #replay-board-host { max-width: min(340px, 42vh); margin-bottom: 8px; }
+    .replay-move { min-height: 0; margin-top: 6px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <a class="brand" href="/" onclick="return goHomeFromBrand(event)">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-text">Signal Siege</span>
+    </a>
+    <div class="top-links">
+      <span><span class="live-dot"></span>Local server</span>
+      <span class="mono">v1.0</span>
+    </div>
+  </header>
+
+  <!-- ================= HOME ================= -->
+  <main id="screen-home" class="screen home">
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow">Turn-based turf war · 2–4 players</div>
+        <h1>CLAIM THE<br>GRID. HOLD<br>THE <span class="signal">SIGNAL.</span></h1>
+        <p class="lede">
+          A fast, tense strategy game for humans and AI agents. Expand from your
+          corner, fortify the line, and seize three signal nodes before the
+          clock runs out.
+        </p>
+        <div class="hero-tags">
+          <span class="tag"><strong>8 min</strong> matches</span>
+          <span class="tag"><strong>No</strong> login or install</span>
+          <span class="tag"><strong>Bots</strong> fill empty seats</span>
+          <span class="tag"><strong>HTTP/JSON</strong> for agents</span>
+        </div>
+        <div class="pulse-rings" aria-hidden="true"><span></span><span></span><span></span></div>
+      </div>
+
+      <section class="launch-card" aria-labelledby="launch-title">
+        <div class="launch-head">
+          <div>
+            <h2 id="launch-title">Start a match</h2>
+            <p>One click, zero accounts. Your match code is the invite.</p>
+          </div>
+          <span class="chip"><span class="dot"></span>Live</span>
+        </div>
+        <div class="launch-body">
+          <div class="field">
+            <label for="home-name">Your name</label>
+            <input id="home-name" type="text" maxlength="24" autocomplete="nickname" placeholder="Player">
+          </div>
+
+          <div class="quick-row">
+            <button id="quick-play" class="btn btn-primary" type="button">Play vs bot <span aria-hidden="true">→</span></button>
+          </div>
+          <div class="sub-actions">
+            <div class="field">
+              <label for="seats">Seats</label>
+              <select id="seats">
+                <option value="2" selected>2 players</option>
+                <option value="3">3 players</option>
+                <option value="4">4 players</option>
+              </select>
+            </div>
+            <button id="create-match" class="btn" type="button">Create match</button>
+          </div>
+          <div class="divider-or">or join with a code</div>
+          <div class="join-box">
+            <div class="join-row">
+              <input id="join-code" class="code-input" type="text" maxlength="6" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="MATCH CODE" aria-label="Match code">
+              <button id="join-match" class="btn" type="button">Join</button>
+            </div>
+            <div class="micro">Tip: open this page with <span class="mono">?match=CODE</span> and the code is filled in for you.</div>
+          </div>
+          <div id="resume-row" class="resume hidden">
+            <span>Resume <strong id="resume-code"></strong>?</span>
+            <button id="resume-btn" class="btn btn-sm btn-ghost" type="button">Rejoin</button>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section class="how" aria-label="How to play">
+      <article class="how-card">
+        <div class="how-icon">[ CLAIM ]</div>
+        <h3>Take ground</h3>
+        <p>Claim an empty cell next to your territory. Every cell is a point.</p>
+      </article>
+      <article class="how-card">
+        <div class="how-icon">[ HOLD ]</div>
+        <h3>Fortify</h3>
+        <p>Raise a cell from 1 to 2 strength. It now takes two adjacent attackers to break.</p>
+      </article>
+      <article class="how-card">
+        <div class="how-icon">[ STRIKE ]</div>
+        <h3>Attack</h3>
+        <p>Power is 1 + your adjacent cells. Beat the defense to flip the cell.</p>
+      </article>
+      <article class="how-card">
+        <div class="how-icon">[ WIN ]</div>
+        <h3>Hold the signal</h3>
+        <p>Own any three of the four ◆ nodes to win instantly. Otherwise, top score at 8 minutes wins.</p>
+      </article>
+    </section>
+
+    <p class="rules-strip">
+      <strong>The rules in one breath:</strong> on your turn, claim an empty cell adjacent
+      to your territory, fortify one of your cells, or attack an adjacent enemy cell.
+      Attack power is 1 plus the number of your cells touching the target, and a capture
+      succeeds only if that beats the target’s strength; a failed attack still spends your
+      turn. Own any three of the four signal nodes to win instantly — if time expires first, the
+      highest score wins, with nodes, total strength, and seat order as tiebreakers.
+    </p>
+
+    <footer class="footer">
+      <span>Signal Siege · built with Python’s standard library · in-memory matches reset on restart</span>
+      <span><a href="/api/health">API health</a> · <span class="mono">127.0.0.1:3100</span></span>
+    </footer>
+  </main>
+
+  <!-- ================= MATCH ================= -->
+  <main id="screen-match" class="screen match hidden">
+    <div class="match-top">
+      <div class="match-id">
+        <span class="kicker">Match</span>
+        <button id="match-code" class="match-code" type="button" title="Copy invite link">------</button>
+      </div>
+      <div class="match-tools">
+        <span id="status-pill" class="status-pill"><span class="dot"></span><span id="status-text">Lobby</span></span>
+        <span id="match-clock" class="clock"><span class="clock-label">Time</span><span id="clock-value" class="mono">8:00</span></span>
+        <button id="replay-btn" class="btn btn-sm btn-ghost" type="button">Replay</button>
+      </div>
+    </div>
+
+    <div id="result-banner" class="result-banner hidden">
+      <div>
+        <div class="result-kicker">Match over</div>
+        <h2 id="result-title">You win!</h2>
+        <p id="result-reason"></p>
+      </div>
+      <div class="result-actions">
+        <button id="result-replay" class="btn btn-sm" type="button">Watch replay</button>
+        <button id="result-new" class="btn btn-sm btn-primary" type="button">New match</button>
+      </div>
+    </div>
+
+    <section id="lobby-panel" class="lobby-grid hidden">
+      <div class="card lobby-main">
+        <h2>Waiting room</h2>
+        <p>Share the invite link, or fill the empty seats with bots and start.</p>
+        <div class="invite-row">
+          <input id="invite-url" type="text" readonly aria-label="Invite link">
+          <button id="copy-invite" class="btn btn-sm" type="button">Copy</button>
+        </div>
+        <div id="lobby-seats" class="lobby-seats"></div>
+        <div class="lobby-actions">
+          <button id="add-bot" class="btn" type="button">Add bot</button>
+          <button id="start-match" class="btn btn-primary" type="button">Start match</button>
+        </div>
+        <div id="lobby-note" class="lobby-note"></div>
+      </div>
+      <aside class="card lobby-side">
+        <h3>How this match works</h3>
+        <div class="steps">
+          <div class="step"><span class="step-num">1</span><span>The host starts the match when at least two seats are filled.</span></div>
+          <div class="step"><span class="step-num">2</span><span>Take turns claiming, fortifying, and attacking for up to 8 minutes.</span></div>
+          <div class="step"><span class="step-num">3</span><span>Own any three of the four ◆ nodes — or hold the best score when time runs out.</span></div>
+        </div>
+        <div class="rule-mini">
+          Empty seats can sit out. Bots use the server’s built-in heuristic and move
+          automatically after you do. Refreshing keeps your seat because your token is
+          saved in this browser.
+        </div>
+      </aside>
+    </section>
+
+    <section id="game-panel" class="hidden">
+      <div id="scoreboard" class="scoreboard" aria-label="Players"></div>
+      <div class="play-grid">
+        <div class="card board-card">
+          <div class="turn-strip">
+            <div class="turn-main">
+              <span id="turn-orb" class="turn-orb"></span>
+              <div>
+                <div id="turn-title" class="turn-title">Your turn</div>
+                <div id="turn-sub" class="turn-sub">Pick an action, then a highlighted cell.</div>
+              </div>
+            </div>
+            <span id="turn-clock" class="turn-clock mono">30s</span>
+          </div>
+          <div class="turn-track" aria-hidden="true"><div id="turn-fill" class="turn-fill"></div></div>
+
+          <div class="action-bar" role="group" aria-label="Choose an action">
+            <button class="action-btn active" data-action="claim" type="button">Claim <span class="count" id="count-claim">0</span></button>
+            <button class="action-btn" data-action="fortify" type="button">Fortify <span class="count" id="count-fortify">0</span></button>
+            <button class="action-btn" data-action="attack" type="button">Attack <span class="count" id="count-attack">0</span></button>
+          </div>
+          <p id="action-hint" class="action-hint">Claim an empty cell next to your territory. Signal nodes are worth +3.</p>
+
+          <div id="board-host" class="board-host" aria-label="Game board"></div>
+          <div class="board-foot">
+            <span class="key"><span class="diamond">◆</span> signal node (+3)</span>
+            <span class="key">rows 1–5 · cols A–E</span>
+          </div>
+        </div>
+
+        <aside class="card side-card">
+          <div class="side-head">
+            <h3>Match log</h3>
+            <span id="move-count" class="count">0 moves</span>
+          </div>
+          <ol id="move-log" class="log"></ol>
+          <div class="pass-line">
+            <span id="match-id-small" class="mono">------</span>
+            <span class="tag">30s turn clock · 8m match</span>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<!-- ================= REPLAY ================= -->
+<div id="replay-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="replay-heading">
+  <div class="modal-card">
+    <button id="replay-close" class="modal-close" type="button" aria-label="Close replay">×</button>
+    <h2 id="replay-heading">Match replay</h2>
+    <p id="replay-sub" class="modal-sub">Every move, replayed on the board.</p>
+    <div id="replay-result" class="replay-result"></div>
+    <div id="replay-board-host"></div>
+    <div class="replay-controls">
+      <button id="replay-first" type="button" aria-label="First frame">⏮</button>
+      <button id="replay-prev" type="button" aria-label="Previous frame">◀</button>
+      <button id="replay-play" type="button" aria-label="Play replay">▶</button>
+      <button id="replay-next" type="button" aria-label="Next frame">▶|</button>
+      <button id="replay-last" type="button" aria-label="Last frame">⏭</button>
+      <input id="replay-range" type="range" min="0" max="0" value="0" aria-label="Replay position">
+      <span id="replay-counter" class="replay-counter mono">0 / 0</span>
+    </div>
+    <p id="replay-move" class="replay-move"></p>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+const $ = (selector, root = document) => root.querySelector(selector);
+const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+const HOME_NAME_KEY = "signal-siege.name";
+const LAST_MATCH_KEY = "signal-siege.last";
+const SESSION_PREFIX = "signal-siege.session.";
+const ACTION_ORDER = ["claim", "attack", "fortify"];
+const COL_LABELS = ["A", "B", "C", "D", "E"];
+
+const el = {
+  home: $("#screen-home"),
+  match: $("#screen-match"),
+  homeName: $("#home-name"),
+  seats: $("#seats"),
+  quickPlay: $("#quick-play"),
+  createMatch: $("#create-match"),
+  joinCode: $("#join-code"),
+  joinMatch: $("#join-match"),
+  resumeRow: $("#resume-row"),
+  resumeCode: $("#resume-code"),
+  resumeBtn: $("#resume-btn"),
+  matchCode: $("#match-code"),
+  statusText: $("#status-text"),
+  clockValue: $("#clock-value"),
+  matchClock: $("#match-clock"),
+  replayBtn: $("#replay-btn"),
+  lobbyPanel: $("#lobby-panel"),
+  gamePanel: $("#game-panel"),
+  inviteUrl: $("#invite-url"),
+  copyInvite: $("#copy-invite"),
+  lobbySeats: $("#lobby-seats"),
+  addBot: $("#add-bot"),
+  startMatch: $("#start-match"),
+  lobbyNote: $("#lobby-note"),
+  resultBanner: $("#result-banner"),
+  resultTitle: $("#result-title"),
+  resultReason: $("#result-reason"),
+  resultReplay: $("#result-replay"),
+  resultNew: $("#result-new"),
+  scoreboard: $("#scoreboard"),
+  turnOrb: $("#turn-orb"),
+  turnTitle: $("#turn-title"),
+  turnSub: $("#turn-sub"),
+  turnClock: $("#turn-clock"),
+  turnFill: $("#turn-fill"),
+  actionHint: $("#action-hint"),
+  boardHost: $("#board-host"),
+  moveLog: $("#move-log"),
+  moveCount: $("#move-count"),
+  matchIdSmall: $("#match-id-small"),
+  toast: $("#toast"),
+  replayModal: $("#replay-modal"),
+  replaySub: $("#replay-sub"),
+  replayResult: $("#replay-result"),
+  replayBoard: $("#replay-board-host"),
+  replayFirst: $("#replay-first"),
+  replayPrev: $("#replay-prev"),
+  replayPlay: $("#replay-play"),
+  replayNext: $("#replay-next"),
+  replayLast: $("#replay-last"),
+  replayRange: $("#replay-range"),
+  replayCounter: $("#replay-counter"),
+  replayMove: $("#replay-move"),
+  replayClose: $("#replay-close"),
+};
+
+const app = {
+  session: null,
+  game: null,
+  action: "claim",
+  busy: false,
+  polling: false,
+  pollTimer: null,
+  pollDelay: 1200,
+  lastMoveCount: -1,
+  finishedOnce: false,
+  replay: { data: null, index: 0, timer: null },
+  toastTimer: null,
+};
+
+/* ---------- boot ---------- */
+
+function init() {
+  const savedName = localStorage.getItem(HOME_NAME_KEY);
+  el.homeName.value = savedName || "Player";
+
+  const params = new URLSearchParams(location.search);
+  const code = normalizeCode(params.get("match") || "");
+  if (code) el.joinCode.value = code;
+
+  const saved = code ? loadSession(code) : null;
+  if (saved) {
+    app.session = saved;
+    enterMatch();
+  } else {
+    showHome();
+    updateResumeRow();
+    if (code) {
+      setTimeout(() => el.homeName.focus(), 60);
+    }
+  }
+  updateHomeButtons();
+}
+
+function showHome() {
+  stopPolling();
+  el.home.classList.remove("hidden");
+  el.match.classList.add("hidden");
+  updateResumeRow();
+  updateHomeButtons();
+}
+
+function showMatchScreen() {
+  el.home.classList.add("hidden");
+  el.match.classList.remove("hidden");
+}
+
+function updateHomeButtons() {
+  const hasName = el.homeName.value.trim().length > 0;
+  el.quickPlay.disabled = app.busy || !hasName;
+  el.createMatch.disabled = app.busy || !hasName;
+  el.joinMatch.disabled = app.busy || !hasName || !el.joinCode.value.trim();
+}
+
+function updateResumeRow() {
+  const last = localStorage.getItem(LAST_MATCH_KEY);
+  const saved = last ? loadSession(last) : null;
+  if (saved && !app.session) {
+    el.resumeCode.textContent = saved.match;
+    el.resumeRow.classList.remove("hidden");
+  } else {
+    el.resumeRow.classList.add("hidden");
+  }
+}
+
+/* ---------- storage ---------- */
+
+function normalizeCode(value) {
+  let text = String(value || "").trim();
+  const fromUrl = text.match(/[?&]match=([A-Za-z0-9]+)/);
+  if (fromUrl) text = fromUrl[1];
+  return text.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+}
+
+function sessionKey(code) {
+  return SESSION_PREFIX + String(code || "").toUpperCase();
+}
+
+function saveSession(session) {
+  try {
+    localStorage.setItem(sessionKey(session.match), JSON.stringify(session));
+    localStorage.setItem(LAST_MATCH_KEY, session.match);
+    localStorage.setItem(HOME_NAME_KEY, playerName());
+  } catch (_) { /* private mode: match still works until refresh */ }
+}
+
+function loadSession(code) {
+  try {
+    const raw = localStorage.getItem(sessionKey(code));
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || typeof data.match !== "string" || typeof data.token !== "string") return null;
+    if (typeof data.player !== "number") return null;
+    return { match: normalizeCode(data.match), player: data.player, token: data.token };
+  } catch (_) {
+    return null;
+  }
+}
+
+function forgetSession() {
+  if (!app.session) return;
+  try { localStorage.removeItem(sessionKey(app.session.match)); } catch (_) {}
+  try {
+    if (localStorage.getItem(LAST_MATCH_KEY) === app.session.match) localStorage.removeItem(LAST_MATCH_KEY);
+  } catch (_) {}
+  app.session = null;
+  app.game = null;
+  try { history.replaceState(null, "", location.pathname); } catch (_) {}
+}
+
+function playerName() {
+  return (el.homeName.value || "").trim() || "Player";
+}
+
+function rememberName() {
+  const name = el.homeName.value.trim();
+  if (name) {
+    try { localStorage.setItem(HOME_NAME_KEY, name); } catch (_) {}
+  }
+}
+
+/* ---------- API ---------- */
+
+async function request(path, options = {}) {
+  const opts = { method: options.method || "GET", headers: { "Accept": "application/json" } };
+  if (options.body !== undefined) {
+    opts.headers["Content-Type"] = "application/json";
+    opts.body = JSON.stringify(options.body);
+  }
+  let res;
+  try {
+    res = await fetch(path, opts);
+  } catch (_) {
+    throw new Error("Can’t reach the game server. Is it running?");
+  }
+  const text = await res.text();
+  let data = null;
+  if (text) {
+    try { data = JSON.parse(text); } catch (_) { throw new Error("The server sent an unexpected response."); }
+  }
+  if (!res.ok) {
+    const error = new Error((data && data.error) || ("Request failed (" + res.status + ")."));
+    error.code = data && data.code;
+    error.status = res.status;
+    throw error;
+  }
+  return data || {};
+}
+
+/* ---------- actions ---------- */
+
+async function createAndStart(vsBot) {
+  if (app.busy) return;
+  const name = playerName();
+  rememberName();
+  app.busy = true;
+  updateHomeButtons();
+  try {
+    const seats = vsBot ? 2 : Number(el.seats.value);
+    const created = await request("/api/create", { method: "POST", body: { name, seats } });
+    app.session = { match: created.match, player: created.player, token: created.token };
+    saveSession(app.session);
+    try {
+      history.replaceState(null, "", "?match=" + encodeURIComponent(created.match));
+    } catch (_) {}
+    app.game = null;
+    app.lastMoveCount = -1;
+    app.finishedOnce = false;
+    showMatchScreen();
+    if (vsBot) {
+      try {
+        await request("/api/bot", {
+          method: "POST",
+          body: { match: app.session.match, player: app.session.player, token: app.session.token, count: 1 },
+        });
+        await request("/api/start", {
+          method: "POST",
+          body: { match: app.session.match, player: app.session.player, token: app.session.token },
+        });
+      } catch (error) {
+        toast("The bot could not join. Add one from the lobby.", "error");
+      }
+    }
+    await pollNow();
+  } catch (error) {
+    toast(error.message, "error");
+    if (app.session && !app.game) showMatchScreen();
+  } finally {
+    app.busy = false;
+    updateHomeButtons();
+  }
+}
+
+async function joinMatch() {
+  if (app.busy) return;
+  const code = normalizeCode(el.joinCode.value);
+  if (!code) {
+    toast("Enter a match code first.", "error");
+    return;
+  }
+  const name = playerName();
+  rememberName();
+  app.busy = true;
+  updateHomeButtons();
+  try {
+    const joined = await request("/api/join", { method: "POST", body: { match: code, name } });
+    app.session = { match: joined.match, player: joined.player, token: joined.token };
+    saveSession(app.session);
+    try { history.replaceState(null, "", "?match=" + encodeURIComponent(joined.match)); } catch (_) {}
+    app.game = null;
+    app.lastMoveCount = -1;
+    app.finishedOnce = false;
+    showMatchScreen();
+    await pollNow();
+  } catch (error) {
+    toast(error.message, "error");
+  } finally {
+    app.busy = false;
+    updateHomeButtons();
+  }
+}
+
+async function addBot() {
+  if (!app.session || app.busy) return;
+  app.busy = true;
+  try {
+    const state = await request("/api/bot", {
+      method: "POST",
+      body: { match: app.session.match, player: app.session.player, token: app.session.token, count: 1 },
+    });
+    if (!app.session) return;
+    renderMatch(state);
+    schedulePoll(900);
+  } catch (error) {
+    toast(error.message, "error");
+  } finally {
+    app.busy = false;
+  }
+}
+
+async function startMatch() {
+  if (!app.session || app.busy) return;
+  app.busy = true;
+  try {
+    const state = await request("/api/start", {
+      method: "POST",
+      body: { match: app.session.match, player: app.session.player, token: app.session.token },
+    });
+    if (!app.session) return;
+    renderMatch(state);
+    schedulePoll(500);
+  } catch (error) {
+    toast(error.message, "error");
+  } finally {
+    app.busy = false;
+  }
+}
+
+async function submitMove(action, target) {
+  if (!app.session || app.busy) return;
+  app.busy = true;
+  try {
+    const state = await request("/api/move", {
+      method: "POST",
+      body: {
+        match: app.session.match,
+        player: app.session.player,
+        token: app.session.token,
+        action,
+        target,
+      },
+    });
+    if (!app.session) return;
+    renderMatch(state);
+    schedulePoll(700);
+  } catch (error) {
+    toast(error.message, "error");
+    schedulePoll(200);
+  } finally {
+    app.busy = false;
+  }
+}
+
+/* ---------- polling ---------- */
+
+function schedulePoll(delay) {
+  clearTimeout(app.pollTimer);
+  if (!app.session) return;
+  app.pollDelay = Math.max(350, delay || 1200);
+  app.pollTimer = setTimeout(pollNow, app.pollDelay);
+}
+
+function stopPolling() {
+  clearTimeout(app.pollTimer);
+  app.pollTimer = null;
+}
+
+async function pollNow() {
+  if (!app.session || app.polling) return;
+  clearTimeout(app.pollTimer);
+  app.polling = true;
+  try {
+    const state = await request(
+      "/api/state?match=" + encodeURIComponent(app.session.match) +
+      "&player=" + encodeURIComponent(app.session.player)
+    );
+    if (!app.session || state.match !== app.session.match) return;
+    if (app.game && state.server_time && app.game.server_time && state.server_time < app.game.server_time) {
+      return;
+    }
+    renderMatch(state);
+  } catch (error) {
+    if (error.status === 404) {
+      toast("That match no longer exists. The server may have restarted.", "error");
+      forgetSession();
+      showHome();
+      return;
+    }
+    toast(error.message, "error");
+    if (app.session) schedulePoll(3000);
+  } finally {
+    app.polling = false;
+    if (app.session && app.game && app.game.status !== "finished") {
+      schedulePoll(app.game.status === "lobby" ? 1500 : 1200);
+    }
+  }
+}
+
+async function enterMatch() {
+  showMatchScreen();
+  app.lastMoveCount = -1;
+  app.finishedOnce = false;
+  await pollNow();
+}
+
+/* ---------- rendering ---------- */
+
+function renderMatch(state) {
+  if (!state) return;
+  app.game = state;
+  if (state.match) app.session.match = state.match;
+  el.matchCode.textContent = state.match;
+  el.matchIdSmall.textContent = state.match;
+  el.statusText.textContent = state.status === "lobby" ? "Lobby" : state.status === "active" ? "Live" : "Finished";
+  el.clockValue.textContent = state.status === "lobby" ? "—" : state.status === "finished" ? "Final" : formatTime(state.match_seconds_left);
+  el.matchClock.classList.toggle("urgent", state.status === "active" && state.match_seconds_left <= 60);
+
+  if (state.status === "lobby") {
+    el.lobbyPanel.classList.remove("hidden");
+    el.gamePanel.classList.add("hidden");
+    el.resultBanner.classList.add("hidden");
+    renderLobby(state);
+    schedulePoll(1500);
+    return;
+  }
+
+  el.lobbyPanel.classList.add("hidden");
+  el.gamePanel.classList.remove("hidden");
+  renderGame(state);
+  if (state.status === "finished") {
+    stopPolling();
+  }
+}
+
+function renderLobby(state) {
+  const playersById = new Map(state.players.map((player) => [player.id, player]));
+  el.lobbySeats.innerHTML = "";
+  for (let seat = 0; seat < state.seats; seat += 1) {
+    const player = playersById.get(seat);
+    const node = document.createElement("div");
+    node.className = "seat" + (player ? "" : " empty");
+    if (player) {
+      const avatar = document.createElement("span");
+      avatar.className = "seat-avatar";
+      avatar.style.setProperty("--c", player.color);
+      avatar.textContent = (player.name || "?").slice(0, 1).toUpperCase();
+      const body = document.createElement("div");
+      body.className = "seat-body";
+      const name = document.createElement("div");
+      name.className = "seat-name";
+      name.append(document.createTextNode(player.name));
+      if (player.id === app.session.player) name.append(tag("You", "tiny-tag"));
+      if (player.bot) name.append(tag("Bot", "tiny-tag pink"));
+      const role = document.createElement("div");
+      role.className = "seat-role";
+      role.textContent = player.bot ? "Built-in heuristic · moves automatically" :
+        player.id === state.host ? "Host" : "Human player";
+      body.append(name, role);
+      node.append(avatar, body);
+    } else {
+      const avatar = document.createElement("span");
+      avatar.className = "seat-avatar";
+      avatar.textContent = "+";
+      const body = document.createElement("div");
+      body.className = "seat-body";
+      const name = document.createElement("div");
+      name.className = "seat-name";
+      name.textContent = "Open seat";
+      const role = document.createElement("div");
+      role.className = "seat-role";
+      role.textContent = state.is_host ? "Add a bot, or share the code" : "Waiting for a player";
+      body.append(name, role);
+      node.append(avatar, body);
+    }
+    el.lobbySeats.append(node);
+  }
+
+  const link = inviteLink(state.match);
+  el.inviteUrl.value = link;
+  el.addBot.classList.toggle("hidden", !state.is_host);
+  el.addBot.disabled = !state.can_add_bot;
+  el.startMatch.classList.toggle("hidden", !state.is_host);
+  el.startMatch.disabled = !state.can_start;
+  el.replayBtn.disabled = state.status === "lobby";
+
+  if (state.is_host) {
+    if (state.joined < 2) {
+      el.addBot.classList.remove("hidden");
+    }
+    if (state.can_start) {
+      const empty = state.seats - state.joined;
+      el.lobbyNote.textContent = empty > 0
+        ? "You can start now. " + empty + " empty seat" + (empty === 1 ? "" : "s") + " will sit out."
+        : "All seats filled. Start when everyone is ready.";
+    } else {
+      el.lobbyNote.textContent = "Add a bot or share the invite link to fill a second seat.";
+    }
+  } else {
+    el.lobbyNote.textContent = "Waiting for " + (state.players.find((p) => p.id === state.host)?.name || "the host") + " to start the match.";
+  }
+}
+
+function renderGame(state) {
+  renderScoreboard(state);
+  renderTurn(state);
+  renderActions(state);
+  renderBoard(state);
+  renderLog(state);
+  renderResult(state);
+  el.replayBtn.disabled = false;
+}
+
+function renderScoreboard(state) {
+  const current = state.current;
+  const ordered = state.players.slice().sort((a, b) => a.id - b.id);
+  if (!ordered.length) {
+    el.scoreboard.innerHTML = "";
+    return;
+  }
+  el.scoreboard.innerHTML = ordered.map((player) => {
+    const cls = ["player-card"];
+    if (player.id === current) cls.push("current");
+    if (player.id === app.session.player) cls.push("you");
+    if (!player.alive) cls.push("out");
+    const badges = [];
+    if (player.id === app.session.player) badges.push('<span class="you-tag">YOU</span>');
+    if (player.bot) badges.push('<span class="bot-tag">BOT</span>');
+    return '<div class="' + cls.join(" ") + '">' +
+      '<span class="swatch" style="--c:' + attr(player.color) + '"></span>' +
+      '<div><div class="p-name"><span>' + escapeHTML(player.name) + '</span>' + badges.join("") + '</div>' +
+      '<div class="p-meta"><span>◆ ' + player.nodes + '</span><span>' + player.cells + ' cells</span>' +
+      (player.alive ? "" : "<span>out</span>") + '</div></div>' +
+      '<div class="p-score">' + player.score + '<small>score</small></div>' +
+      '</div>';
+  }).join("");
+}
+
+function renderTurn(state) {
+  const finished = state.status === "finished";
+  const yours = state.your_turn && !finished;
+  if (finished) {
+    el.turnTitle.textContent = "Match over";
+    el.turnSub.textContent = state.finish_reason || "Final board";
+    el.turnOrb.classList.add("waiting");
+    el.turnFill.style.width = "0%";
+    el.turnClock.textContent = "—";
+    return;
+  }
+  if (yours) {
+    el.turnTitle.textContent = "Your turn";
+    el.turnSub.textContent = "Choose an action, then tap a highlighted cell.";
+  } else if (state.current_name) {
+    const current = state.players.find((p) => p.id === state.current);
+    el.turnTitle.textContent = (current && current.bot ? "Bot " : "") + state.current_name + " is playing";
+    el.turnSub.textContent = current && current.bot ? "The server moves bots automatically." : "Waiting for their move…";
+  } else {
+    el.turnTitle.textContent = "Waiting";
+    el.turnSub.textContent = "Syncing the match…";
+  }
+  el.turnOrb.classList.toggle("waiting", !yours);
+  const total = state.turn_seconds || 30;
+  const left = Math.max(0, Math.min(total, state.turn_seconds_left || 0));
+  el.turnFill.style.width = ((left / total) * 100).toFixed(1) + "%";
+  el.turnClock.textContent = left + "s";
+}
+
+function renderActions(state) {
+  const counts = { claim: 0, fortify: 0, attack: 0 };
+  for (const move of state.legal || []) counts[move.action] = (counts[move.action] || 0) + 1;
+  const finished = state.status === "finished";
+  const canAct = state.your_turn && state.status === "active";
+  if (canAct && !counts[app.action]) {
+    app.action = ACTION_ORDER.find((action) => counts[action] > 0) || "claim";
+  }
+  $$(".action-btn").forEach((button) => {
+    const action = button.dataset.action;
+    const count = counts[action] || 0;
+    button.classList.toggle("active", canAct && app.action === action);
+    button.setAttribute("aria-pressed", canAct && app.action === action ? "true" : "false");
+    button.disabled = !canAct || count === 0;
+    const countEl = button.querySelector(".count");
+    if (countEl) countEl.textContent = canAct ? count : 0;
+  });
+  const hints = {
+    claim: "Claim an empty cell next to your territory. Signal nodes are worth +3 points.",
+    fortify: "Fortify one of your cells (strength 1 → 2). A fortified cell needs two adjacent attackers.",
+    attack: "Attack an adjacent enemy: power = 1 + your cells touching it. The badge shows power vs defense.",
+  };
+  if (finished) {
+    el.actionHint.innerHTML = "<strong>Match over.</strong> The board is frozen — watch the replay or start a new match.";
+  } else {
+    el.actionHint.innerHTML = canAct
+      ? hints[app.action]
+      : "<strong>Waiting.</strong> The board will unlock when it is your turn.";
+  }
+}
+
+function renderBoard(state) {
+  const legal = new Map();
+  if (state.your_turn && state.status === "active") {
+    for (const move of state.legal || []) {
+      if (move.action === app.action) legal.set(move.target[0] + "," + move.target[1], move);
+    }
+  }
+  renderBoardInto(el.boardHost, state.board, state.players, {
+    legal,
+    you: app.session.player,
+    interactive: !!state.your_turn && state.status === "active",
+    highlight: state.last_move ? state.last_move.target : null,
+  });
+}
+
+function renderLog(state) {
+  if (state.move_count === app.lastMoveCount) return;
+  app.lastMoveCount = state.move_count;
+  const players = new Map(state.players.map((player) => [player.id, player]));
+  if (!state.moves || state.moves.length === 0) {
+    el.moveLog.innerHTML = '<li class="log-empty"><strong>No moves yet.</strong><br>Claim a cell adjacent to your corner to begin. Control any three ◆ nodes to win.</li>';
+    el.moveCount.textContent = "0 moves";
+    return;
+  }
+  el.moveLog.innerHTML = state.moves.map((move) => {
+    const player = players.get(move.player);
+    const color = player ? player.color : "#8ea7b9";
+    const tags = [];
+    if (move.auto) tags.push('<span class="mini-tag">auto</span>');
+    if (move.bot) tags.push('<span class="mini-tag">bot</span>');
+    return '<li><span class="log-dot" style="--c:' + attr(color) + '"></span>' +
+      '<span class="log-text"><strong>' + escapeHTML(move.player_name || "Player") + '</strong> ' +
+      escapeHTML(move.detail || move.action) + tags.join("") + '</span>' +
+      '<span class="log-time">' + formatTime(move.at) + '</span></li>';
+  }).join("");
+  el.moveCount.textContent = state.move_count + (state.move_count === 1 ? " move" : " moves");
+  el.moveLog.scrollTop = el.moveLog.scrollHeight;
+}
+
+function renderResult(state) {
+  const finished = state.status === "finished";
+  el.resultBanner.classList.toggle("hidden", !finished);
+  if (!finished) {
+    app.finishedOnce = false;
+    return;
+  }
+  el.resultBanner.classList.toggle("loss", state.winner !== app.session.player);
+  const you = state.players.find((player) => player.id === app.session.player);
+  if (state.winner === app.session.player) {
+    el.resultTitle.textContent = "You win!";
+  } else if (state.winner_name) {
+    el.resultTitle.textContent = state.winner_name + " wins";
+  } else {
+    el.resultTitle.textContent = "Match over";
+  }
+  const bits = [];
+  if (state.finish_reason) bits.push(state.finish_reason);
+  if (you) bits.push("You finished #" + you.rank + " with " + you.score + " points.");
+  el.resultReason.textContent = bits.join(" ");
+  if (!app.finishedOnce) {
+    app.finishedOnce = true;
+    setTimeout(() => el.resultBanner.scrollIntoView({ behavior: "smooth", block: "nearest" }), 80);
+  }
+}
+
+/* ---------- board rendering ---------- */
+
+function renderBoardInto(host, board, players, options = {}) {
+  const colorById = new Map((players || []).map((player) => [player.id, player.color]));
+  const nameById = new Map((players || []).map((player) => [player.id, player.name]));
+  const legal = options.legal || new Map();
+  let cells = "";
+  for (let row = 0; row < board.length; row += 1) {
+    for (let col = 0; col < board[row].length; col += 1) {
+      const cell = board[row][col];
+      const move = legal.get(row + "," + col);
+      const owner = cell.owner;
+      const classes = ["cell"];
+      if (cell.node) classes.push("node");
+      if (owner !== null && owner !== undefined) classes.push("owned");
+      if (owner === options.you) classes.push("mine");
+      if (move && options.interactive) classes.push("legal");
+      if (options.highlight && options.highlight[0] === row && options.highlight[1] === col) classes.push("highlight");
+      const attrs = [];
+      attrs.push('type="button"');
+      attrs.push('class="' + classes.join(" ") + '"');
+      if (owner !== null && owner !== undefined) {
+        attrs.push('style="--owner:' + attr(colorById.get(owner) || "#8ea7b9") + '"');
+        attrs.push('data-owner="' + owner + '"');
+      }
+      if (move && options.interactive) {
+        attrs.push('data-action="' + attr(move.action) + '"');
+        attrs.push('data-row="' + row + '"');
+        attrs.push('data-col="' + col + '"');
+      } else {
+        attrs.push("disabled");
+      }
+      let inner = "";
+      if (cell.node) inner += '<span class="node-glyph" aria-hidden="true">◆</span>';
+      if (owner !== null && owner !== undefined) {
+        inner += '<span class="strength" aria-hidden="true"><i class="' + (cell.strength >= 1 ? "on" : "") + '"></i><i class="' + (cell.strength >= 2 ? "on" : "") + '"></i></span>';
+      } else if (cell.node) {
+        inner += '<span class="node-bonus">+3</span>';
+      }
+      if (move && move.action === "attack" && options.interactive) {
+        inner += '<span class="atk-badge ' + (move.captures ? "good" : "bad") + '">' + move.power + "v" + move.defense + '</span>';
+      }
+      inner += '<span class="cell-label">' + COL_LABELS[col] + (row + 1) + '</span>';
+      const ownerName = owner !== null && owner !== undefined ? (nameById.get(owner) || "Player") : "Empty";
+      const label = COL_LABELS[col] + (row + 1) + ", " + ownerName +
+        (cell.node ? ", signal node" : "") +
+        (owner !== null && owner !== undefined ? ", strength " + cell.strength : "") +
+        (move && move.action === "attack" ? ", attack " + move.power + " vs " + move.defense : "") +
+        (move && move.action === "claim" ? ", can claim" : "") +
+        (move && move.action === "fortify" ? ", can fortify" : "");
+      attrs.push('aria-label="' + attr(label) + '"');
+      cells += "<button " + attrs.join(" ") + ">" + inner + "</button>";
+    }
+  }
+  host.innerHTML =
+    '<div class="board-shell">' +
+      '<div></div>' +
+      '<div class="axis axis-cols" aria-hidden="true">' + COL_LABELS.map((label) => "<span>" + label + "</span>").join("") + '</div>' +
+      '<div class="axis axis-rows" aria-hidden="true">' + [1, 2, 3, 4, 5].map((label) => "<span>" + label + "</span>").join("") + '</div>' +
+      '<div class="board" role="grid" aria-label="5 by 5 game board">' + cells + '</div>' +
+    '</div>';
+}
+
+/* ---------- replay ---------- */
+
+async function openReplay() {
+  if (!app.session) return;
+  if (app.replay.timer) {
+    clearInterval(app.replay.timer);
+    app.replay.timer = null;
+  }
+  try {
+    const data = await request("/api/replay?match=" + encodeURIComponent(app.session.match));
+    if (!app.session) return;
+    app.replay.data = data;
+    app.replay.index = 0;
+    el.replaySub.textContent = "Match " + data.match + " · " + (data.frames.length === 0 ? "no moves" : data.frames.length + " moves");
+    el.replayResult.textContent = data.finish_reason || (data.status === "active" ? "Match in progress — replay is live up to the latest move." : "Lobby — the match has not started yet.");
+    el.replayRange.min = "0";
+    el.replayRange.max = String(Math.max(0, data.frames.length));
+    el.replayRange.value = "0";
+    el.replayModal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+    renderReplayFrame(0);
+    setTimeout(() => el.replayClose.focus(), 30);
+  } catch (error) {
+    toast(error.message, "error");
+  }
+}
+
+function closeReplay() {
+  if (app.replay.timer) {
+    clearInterval(app.replay.timer);
+    app.replay.timer = null;
+  }
+  el.replayModal.classList.add("hidden");
+  document.body.style.overflow = "";
+  el.replayPlay.textContent = "▶";
+  el.replayPlay.setAttribute("aria-label", "Play replay");
+}
+
+function replayFrames() {
+  const data = app.replay.data;
+  if (!data) return [];
+  return [{ board: data.initial_board, label: "Match start", player_name: null, detail: "The board at kickoff.", at: 0 }]
+    .concat((data.frames || []).map((frame) => frame));
+}
+
+function renderReplayFrame(index) {
+  const data = app.replay.data;
+  if (!data) return;
+  const frames = replayFrames();
+  const last = frames.length - 1;
+  app.replay.index = Math.max(0, Math.min(last, index));
+  const frame = frames[app.replay.index];
+  const players = data.players || [];
+  renderBoardInto(el.replayBoard, frame.board, players, {
+    interactive: false,
+    highlight: frame.target || null,
+  });
+  el.replayRange.value = String(app.replay.index);
+  el.replayCounter.textContent = app.replay.index + " / " + last;
+  if (app.replay.index === 0) {
+    el.replayMove.innerHTML = "<strong>Match start.</strong> Starting corners are fortified at strength 2. Four ◆ nodes are up for grabs; control any three.";
+  } else {
+    const time = formatTime(frame.at || 0);
+    el.replayMove.innerHTML = "<strong>" + escapeHTML(frame.player_name || "Player") + "</strong> " +
+      escapeHTML(frame.detail || frame.action) + " · " + time +
+      (frame.auto ? ' <span class="mini-tag">auto</span>' : "");
+  }
+  if (app.replay.index === last) {
+    if (app.replay.timer) {
+      clearInterval(app.replay.timer);
+      app.replay.timer = null;
+      el.replayPlay.textContent = "▶";
+    }
+  }
+}
+
+function stepReplay(delta) {
+  if (!app.replay.data) return;
+  renderReplayFrame(app.replay.index + delta);
+}
+
+function toggleReplay() {
+  if (!app.replay.data) return;
+  if (app.replay.timer) {
+    clearInterval(app.replay.timer);
+    app.replay.timer = null;
+    el.replayPlay.textContent = "▶";
+    el.replayPlay.setAttribute("aria-label", "Play replay");
+    return;
+  }
+  const frames = replayFrames();
+  if (app.replay.index >= frames.length - 1) renderReplayFrame(0);
+  el.replayPlay.textContent = "❚❚";
+  el.replayPlay.setAttribute("aria-label", "Pause replay");
+  app.replay.timer = setInterval(() => {
+    const total = replayFrames().length;
+    if (app.replay.index >= total - 1) {
+      clearInterval(app.replay.timer);
+      app.replay.timer = null;
+      el.replayPlay.textContent = "▶";
+      el.replayPlay.setAttribute("aria-label", "Play replay");
+      return;
+    }
+    renderReplayFrame(app.replay.index + 1);
+  }, 850);
+}
+
+/* ---------- misc ---------- */
+
+function formatTime(seconds) {
+  const total = Math.max(0, Math.round(Number(seconds) || 0));
+  const minutes = Math.floor(total / 60);
+  return minutes + ":" + String(total % 60).padStart(2, "0");
+}
+
+function inviteLink(code) {
+  const url = new URL(location.href);
+  url.search = "?match=" + encodeURIComponent(code);
+  url.hash = "";
+  return url.toString();
+}
+
+async function copyInvite() {
+  if (!app.session) return;
+  const link = inviteLink(app.session.match);
+  try {
+    await navigator.clipboard.writeText(link);
+    toast("Invite link copied.", "ok");
+  } catch (_) {
+    el.inviteUrl.select();
+    try { document.execCommand("copy"); toast("Invite link copied.", "ok"); }
+    catch (error) { toast("Copy failed. Select the link manually.", "error"); }
+  }
+}
+
+function toast(message, kind = "error") {
+  el.toast.textContent = message;
+  el.toast.className = "toast show " + (kind === "ok" ? "ok" : "");
+  clearTimeout(app.toastTimer);
+  app.toastTimer = setTimeout(() => {
+    el.toast.className = "toast" + (kind === "ok" ? " ok" : "");
+  }, 3800);
+}
+
+function tag(text, className) {
+  const span = document.createElement("span");
+  span.className = className;
+  span.textContent = text;
+  return span;
+}
+
+function escapeHTML(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function attr(value) {
+  return escapeHTML(value).replace(/`/g, "&#96;");
+}
+
+/* ---------- events ---------- */
+
+el.homeName.addEventListener("input", () => {
+  updateHomeButtons();
+  rememberName();
+});
+el.homeName.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") { event.preventDefault(); el.quickPlay.click(); }
+});
+el.joinCode.addEventListener("input", () => {
+  const start = el.joinCode.selectionStart;
+  el.joinCode.value = normalizeCode(el.joinCode.value);
+  el.joinCode.setSelectionRange(start, start);
+  updateHomeButtons();
+});
+el.joinCode.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") { event.preventDefault(); joinMatch(); }
+});
+
+el.quickPlay.addEventListener("click", () => createAndStart(true));
+el.createMatch.addEventListener("click", () => createAndStart(false));
+el.joinMatch.addEventListener("click", joinMatch);
+el.resumeBtn.addEventListener("click", () => {
+  const last = localStorage.getItem(LAST_MATCH_KEY);
+  const saved = last ? loadSession(last) : null;
+  if (!saved) {
+    toast("That saved seat is gone. Start a new match.", "error");
+    updateResumeRow();
+    return;
+  }
+  app.session = saved;
+  try { history.replaceState(null, "", "?match=" + encodeURIComponent(saved.match)); } catch (_) {}
+  enterMatch();
+});
+
+el.matchCode.addEventListener("click", copyInvite);
+el.copyInvite.addEventListener("click", copyInvite);
+
+el.addBot.addEventListener("click", addBot);
+el.startMatch.addEventListener("click", startMatch);
+
+$$(".action-btn").forEach((button) => {
+  button.addEventListener("click", () => {
+    if (button.disabled) return;
+    app.action = button.dataset.action;
+    if (app.game) {
+      renderActions(app.game);
+      renderBoard(app.game);
+    }
+  });
+});
+
+el.boardHost.addEventListener("click", (event) => {
+  const cell = event.target.closest(".cell[data-action]");
+  if (!cell || app.busy) return;
+  const action = cell.dataset.action;
+  const target = [Number(cell.dataset.row), Number(cell.dataset.col)];
+  submitMove(action, target);
+});
+
+el.replayBtn.addEventListener("click", openReplay);
+el.resultReplay.addEventListener("click", openReplay);
+el.replayClose.addEventListener("click", closeReplay);
+el.replayModal.addEventListener("click", (event) => {
+  if (event.target === el.replayModal) closeReplay();
+});
+el.replayFirst.addEventListener("click", () => { renderReplayFrame(0); });
+el.replayPrev.addEventListener("click", () => stepReplay(-1));
+el.replayNext.addEventListener("click", () => stepReplay(1));
+el.replayLast.addEventListener("click", () => { renderReplayFrame(replayFrames().length - 1); });
+el.replayPlay.addEventListener("click", toggleReplay);
+el.replayRange.addEventListener("input", (event) => renderReplayFrame(Number(event.target.value)));
+
+el.resultNew.addEventListener("click", () => {
+  forgetSession();
+  app.finishedOnce = false;
+  showHome();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !el.replayModal.classList.contains("hidden")) closeReplay();
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && app.session && app.game && app.game.status !== "finished") {
+    clearTimeout(app.pollTimer);
+    pollNow();
+  }
+});
+
+window.goHomeFromBrand = function (event) {
+  if (app.session && app.game && app.game.status === "active") {
+    const leave = window.confirm("Leave this match? Your seat stays saved, and you can rejoin from this browser.");
+    if (!leave) { event.preventDefault(); return false; }
+  }
+  if (event) event.preventDefault();
+  app.session = null;
+  app.game = null;
+  app.lastMoveCount = -1;
+  stopPolling();
+  showHome();
+  try { history.replaceState(null, "", location.pathname); } catch (_) {}
+  return false;
+};
+
+init();
+</script>
+</body>
+</html>
