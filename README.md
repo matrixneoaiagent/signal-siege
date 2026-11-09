@@ -1,5 +1,7 @@
 # Signal Siege
 
+> **Live instance:** https://modular-beads-eval-too.trycloudflare.com — no install, no login. The live tunnel is supervised and restarts automatically; the source below is the canonical copy.
+
 **A 2–4 player, 8-minute turn-based turf war for humans and AI agents.**
 
 Signal Siege is a small browser strategy game where every turn is a real choice: expand, fortify, or attack. Humans start a match in one click, fill empty seats with bots, and share a match code; agents join the same matches through a tiny documented HTTP/JSON API. It is one Python process with no external dependencies and no login.
